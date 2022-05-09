@@ -1,0 +1,29 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.atom {
+    --w: 6px;
+    width: var(--w);
+    height: var(--w);
+    border: calc(var(--w) / 3) solid black;
+    border-radius: 50%;
+    position: absolute;
+    top: calc(var(--w) / -2);
+    left: calc(var(--w) / -2);
+    overflow: visible;
+    color: gray;
+}
+
+.bond {
+    border-top: 2px dotted black;
+    position: absolute;
+}
