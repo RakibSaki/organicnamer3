@@ -23,6 +23,7 @@ class Atom {
         bondLine.style.width = `${width}px`
         let rotate = Math.atan((bondWith.y - this.y) / (bondWith.x - this.x))
         bondLine.style.transform = `translate(${width / -2}px, -1px) rotate(${rotate}rad)`
+        bondLine.style.zIndex = '-1'
         document.body.appendChild(bondLine)
         // record bond
         this.bonds.push(bondWith)
@@ -39,6 +40,7 @@ class Atom {
         bondWith.distances.push(new Distance(this, 1))
         // record molecule
         bondWith.molecule.add(this)
+        this.molecule.showName()
     }
 
     distanceFrom(atom) {
@@ -65,27 +67,26 @@ class Molecule {
             this.atoms.push(atom)
         }
     }
-    add(atom) {
-        atom.molecule = this
-        this.atoms.unshift(atom)
+    showName() {
         for (let i = 0; i < this.atoms.length; i++) {
             this.atoms[i].element.innerHTML = ''
         }
-        atom.element.innerHTML = atom.element.innerHTML + '\n' + nameParentChain(this.parentChain())
+        this.atoms[0].element.innerHTML = '\n' + nameParentChain(this.parentChain())
+    }
+    add(atom) {
+        atom.molecule = this
+        this.atoms.unshift(atom)
     }
     parentChain() {
         if (this.atoms.length == 1) {
             return [this.atoms[0]]
         }
         let terminalAtoms = []
+        // find terminal atoms
         for (let i = 0; i < this.atoms.length; i++) {
             if (this.atoms[i].bonds.length == 1) {
                 terminalAtoms.push(this.atoms[i])
             }
-        }
-        console.log(terminalAtoms.length)
-        for (let i = 0; i < terminalAtoms.length; i++) {
-            terminalAtoms[i].element.innerHTML = `${i + 1} terminal`
         }
         let longestChains = [{ length: 0, between: [null, null] }]
         // record longest chain(s)
@@ -112,8 +113,6 @@ class Molecule {
                 }
             }
         }
-        longestChains[0].between[0].element.innerHTML = 'from'
-        longestChains[0].between[1].element.innerHTML = 'to'
         // if several longest chains, just choosing the first longest chain for now
         let result = [longestChains[0].between[0]]
         // keep adding atom to the chain from between[0] to between[1]
@@ -133,8 +132,6 @@ class Molecule {
                     continue
                 }
             }
-        }
-        for (let i = 0; i < result.length; i++) {
         }
         return result
     }
