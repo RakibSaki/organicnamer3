@@ -79,7 +79,9 @@ class Molecule {
     }
     parentChain() {
         if (this.atoms.length == 1) {
-            return [this.atoms[0]]
+            return {
+                chain: [this.atoms[0]]
+            }
         }
         let terminalAtoms = []
         // find terminal atoms
@@ -114,31 +116,75 @@ class Molecule {
             }
         }
         // if several longest chains, just choosing the first longest chain for now
-        let result = [longestChains[0].between[0]]
-        // keep adding atom to the chain from between[0] to between[1]
-        while (result[0] !== longestChains[0].between[1]) {
-            // the next atom in the chain will be bonded the last added atom
-            let candidates = result[0].bonds
-            // the next atom will be one closer the the last added atom
-            let distanceNeeded = result[0].distanceFrom(longestChains[0].between[1]) - 1
-            // the atom with 0 distance from between[1] is between[1] itself, and the chain is complete
-            if (distanceNeeded == 0) {
-                result.unshift(longestChains[0].between[1])
-                continue
-            }
-            for (let i = 0; i < candidates.length; i++) {
-                if (candidates[i].distanceFrom(longestChains[0].between[1]) == distanceNeeded) {
-                    result.unshift(candidates[i])
+        for (let i = 0; i < longestChains.length; i++) {
+            let chain = [longestChains[i].between[0]]
+            // position of branches, starting from 2 (terminal atom is 1)
+            longestChains[i].branchesAt = []
+            longestChains.branches = 0
+            // keep adding atom to the chain from between[0] to between[1]
+            for (let distanceNeeded = longestChains[i].length - 1; distanceNeeded >= 0; distanceNeeded--) {
+                // the next atom in the chain will be bonded the last added atom
+                let candidates = chain[0].bonds
+                // the next atom will be one closer the the last added atom
+                // so distanceNeeded is decreasing by one
+
+                // the atom with 0 distance from between[1] is between[1] itself, and the chain is complete
+                if (distanceNeeded == 0) {
+                    chain.unshift(longestChains[i].between[1])
                     continue
                 }
+                for (let j = 0; j < candidates.length; j++) {
+                    if (candidates[j].distanceFrom(longestChains[i].between[1]) == distanceNeeded) {
+                        console.log('jound')
+                        chain.unshift(candidates[j])
+                        continue
+                    }
+                }
+                // if selected candidate (new atom in chain) has branches, record branch position and number of branches
+                if (chain[0].bonds.length > 2) {
+                    longestChains[i].branchesAt.push(1 + longestChains[i].length - distanceNeeded)
+                    longestChains[i].branches += chain[0].bonds.length - 2
+                }
+            }
+            longestChains[i].chain = chain
+            longestChains[i].closestBranchAt = longestChains[i].branchesAt[0]
+            let closestFromOtherEnd = 2 + longestChains[i].length  - longestChains[i].branchesAt[longestChains[i].branchesAt.length - 1]
+            if (closestFromOtherEnd < longestChains[i].closestBranchAt) {
+                longestChains[i].closestBranchAt = closestFromOtherEnd
             }
         }
-        return result
+        let chainsToSelectIndex = [0]
+        // find chain with most branches
+        for (let i = 1; i < longestChains.length; i++) {
+            // if found a chain with more branches, select that instead
+            if (longestChains[i].branches > longestChains[chainsToSelectIndex[0]].branches) {
+                chainsToSelectIndex = [i]
+                continue
+            }
+            // if found another chain with same number of branches, add that to selection
+            if (longestChains[i].branches == longestChains[chainsToSelectIndex[0]].branches) {
+                chainsToSelectIndex.push(i)
+            }
+        }
+        // if one chain exclusively has most branches, return that chain
+        if (chainsToSelectIndex.length == 1) {
+            return longestChains[chainsToSelectIndex[0]]
+        }
+        // else select chain with branches starting closest to a terminal atom
+        for (let i = 1; i < chainsToSelectIndex.length; i++) {
+            let chainToCheckAgainst = longestChains[chainsToSelectIndex[0]]
+            let chainToCheck = longestChains[chainsToSelectIndex[i]]
+            if (chainToCheck.closestBranchAt < chainToCheckAgainst.closestBranchAt) {
+                chainsToSelectIndex[0] = i
+            }
+        }
+        return longestChains[chainsToSelectIndex[0]]
     }
 }
 
 let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 'dec']
 
 function nameParentChain(parentChain) {
-    return names[parentChain.length - 1] + 'ane'
+    console.log(parentChain)
+    return names[parentChain.chain.length - 1] + 'ane'
 }

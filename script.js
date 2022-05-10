@@ -9,18 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('click')
         if (!mouseOnAtom) {
             let newAtom = new Atom(event.clientX, event.clientY, selected)
-            console.log('new atom')
             mouseOnAtom = true
             newAtom.element.addEventListener('mouseover', () => {
                 mouseOnAtom = true
             })
-            newAtom.element.addEventListener('mouseenter', () => {
-                mouseOnAtom = true
-            })
             newAtom.element.addEventListener('mouseout', () => {
-                mouseOnAtom = false
-            })
-            newAtom.element.addEventListener('mouseleave', () => {
                 mouseOnAtom = false
             })
             newAtom.element.addEventListener('click', () => {
@@ -29,7 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     selected = null
                     return
                 }
-                selected.element.classList.remove('selected-atom')
+                if (selected) {
+                    selected.element.classList.remove('selected-atom')
+                }
                 selected = newAtom
                 selected.element.classList.add('selected-atom')
             })
