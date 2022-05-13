@@ -187,14 +187,14 @@ function getChain(start, finish) {
 
 let multipliers = ['', 'di', 'tri', 'tetra', 'penta', 'hexa', 'hepta', 'octa', 'nona', 'deca']
 
-function nameBranches(chain, terminalAtomsAmong) {
+function nameBranches(chain, terminalAtomsAmong, avoidAtom) {
     let branches = {}   // of the format {methyl: [2, 6], ethyl: [3] ...} {subbranchname: position}
     let branchNames = []
     // fillup branches map
     for (let i = 1; i < chain.length - 1; i++) {
         if (chain[i].bonds.length > 2) {
             for (let j = 0; j < chain[i].bonds.length; j++) {
-                if (chain[i].bonds[j] != chain[i - 1] && chain[i].bonds[j] != chain[i + 1]) {
+                if (chain[i].bonds[j] != chain[i - 1] && chain[i].bonds[j] != chain[i + 1] && chain[i].bonds[j] !== avoidAtom) {
                     let subBranchName = nameBranch(chain[i], chain[i].bonds[j], terminalAtomsAmong)
                     if (!branches[subBranchName]) {
                         branches[subBranchName] = [i + 1]
@@ -251,11 +251,35 @@ function nameBranch(from, start, terminalAtomsAmong) {
         let chain = getChain(start, farthestTerminalAtom)
         return nameBranches(chain, terminalAtoms) + names[farthestDistance] + 'yl'
     } else {
+        let longestChains = [{ length: 0, between: [null, null] }]
         for (let i = 0; i < terminalAtoms.length; i++) {
             for (let j = 0; j < terminalAtoms.length; j++) {
-
+                if (i !== j) {
+                    let distance = terminalAtoms[i].distanceFrom(terminalAtoms[j])
+                    let distanceFromHeadToStart = terminalAtoms[i].distanceFrom(start)
+                    // if 'start' atom is in the chain from terminalAtom[i] to terminalAtom[j]
+                    if (distanceFromHeadToStart + start.distanceFrom(terminalAtoms[j]) == distance) {
+                        if (distance > longestChains[0].length) {
+                            longestChains = [{ length: distance, between: [terminalAtoms[i], terminalAtoms[j]], startAt: distanceFromHeadToStart + 1 }]
+                        }
+                        if (distance == longestChains[0].length) {
+                            longestChains.push({ length: distance, between: [terminalAtoms[i], terminalAtoms[j]], startAt: distanceFromHeadToStart + 1 })
+                        }
+                    }
+                }
             }
         }
+        let longestChains2 = [longestChains[0]]
+        for (let i = 1; i < longestChains.length; i++) {
+            if (longestChains[i].startAt < longestChains2[0].startAt) {
+                longestChains2 = [longestChains[i]]
+            }
+            if (longestChains[i].startAt == longestChains2[0].startAt) {
+                longestChains2.push(longestChains[i])
+            }
+        }
+        longestChains2[0].chain = getChain(longestChains2[0].between[0], longestChains2[0].between[1])
+        return nameBranches(longestChains2[0].chain, terminalAtoms, from) + names[longestChains2[0].length] + '-' + (longestChains2[0].startAt + 1).toString() + '-yl'
         return 'notprimarybranch'
     }
 
