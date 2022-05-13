@@ -2,6 +2,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
 }
 
 :root {
@@ -28,7 +29,7 @@ body {
     top: calc(var(--w) / -2);
     left: calc(var(--w) / -2);
     overflow: visible;
-    color: var(--color4);
+    color: var(--color2);
     cursor: pointer;
     font-size: calc(var(--w) * 2);
     white-space: nowrap;
@@ -47,4 +48,10 @@ body {
 #logo {
     width: 200px;
     background-color: transparent;
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
 }
