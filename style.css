@@ -4,35 +4,47 @@
     padding: 0;
 }
 
+:root {
+    --w: 16px;
+    --color1: #fef9ea;
+    --color2: #a49393;
+    --color3: #67595e;
+    --colorS: #63233a;
+    --color4: #231f20;
+}
+
 body {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
 }
 
-:root {
-    --w: 16px;
-}
-
 .atom {
     width: var(--w);
     height: var(--w);
     border-radius: 50%;
-    background-image: radial-gradient(white 0%, white 33%, black 33%, black 100%);
+    background-image: radial-gradient(white 0%, white 33%, var(--color3) 33%, var(--color3) 100%);
     position: absolute;
     top: calc(var(--w) / -2);
     left: calc(var(--w) / -2);
     overflow: visible;
-    color: gray;
+    color: var(--color4);
     cursor: pointer;
     font-size: calc(var(--w) * 2);
+    white-space: nowrap;
 }
 
 .selected-atom {
-    background-image: radial-gradient(white 0%, white 33%, brown 33%, brown 100%);
+    background-image: radial-gradient(var(--colorS) 0%, var(--colorS) 33%, var(--color2) 33%, var(--color2) 100%);
+    text-shadow: -2px -2px var(--color1);
 }
 
 .bond {
-    border-top: 2px dotted black;
+    border-top: 2px dotted var(--color2);
     position: absolute;
+}
+
+#logo {
+    width: 200px;
+    background-color: transparent;
 }
