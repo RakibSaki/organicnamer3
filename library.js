@@ -122,26 +122,6 @@ class Molecule {
             // position of branches, starting from 2 (terminal atom is 1)
             longestChains[i].branchesAt = []
             longestChains[i].branches = 0
-            // keep adding atom to the chain from between[0] to between[1]
-            // for (let distanceNeeded = longestChains[i].length - 1; distanceNeeded >= 0; distanceNeeded--) {
-            //     // the next atom in the chain will be bonded to the last added atom
-            //     let candidates = chain[0].bonds
-            //     // the next atom will be one closer than the last added atom
-            //     // so distanceNeeded is decreasing by one
-
-            //     // the atom with 0 distance from between[1] is between[1] itself, and the chain is complete
-            //     if (distanceNeeded == 0) {
-            //         chain.unshift(longestChains[i].between[1])
-            //         continue
-            //     }
-            //     for (let j = 0; j < candidates.length; j++) {
-            //         if (candidates[j].distanceFrom(longestChains[i].between[1]) == distanceNeeded) {
-            //             chain.unshift(candidates[j])
-            //             continue
-            //         }
-            //     }
-            //     
-            // }
             // record branch positions and numbers of branches
             for (let j = 0; j < chain.length; j++) {
                 if (chain[j].bonds.length > 2) {
@@ -190,11 +170,41 @@ let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 
 
 function nameParentChain(parentChain) {
     let parentChainName = names[parentChain.chain.length - 1] + 'ane'
-    return parentChainName
+    let chain = parentChain.chain
     let branches = {}
-    for (let i = 0; i < parentChain.chain.length; i++) {
-        
+    let branchNames = []
+    for (let i = 1; i < chain.length - 1; i++) {
+        if (chain[i].bonds.length > 2) {
+            for (let j = 0; j < chain[i].bonds.length; j++) {
+                if (chain[i].bonds[j] != chain[i - 1] && chain[i].bonds[j] != chain[i + 1]) {
+                    let subBranchName = nameBranch(chain[i], chain[i].bonds[j])
+                    if (!branchNames.includes(subBranchName)) {
+                        branchNames.push(subBranchName)
+                    }
+                    if (!branches[subBranchName]) {
+                        branches[subBranchName] = [i + 1]
+                    } else {
+                        branches[subBranchName].push(i + 1)
+                    }
+                }
+            }
+        }
     }
+    if (branchNames.length == 0) {
+        return parentChainName
+    }
+    branchNames.sort()
+    let prefix = ''
+    for (let branchName of branchNames) {
+        let positions = branches[branchName]
+        if ('0123456789'.includes(branchName[0])) {
+            branchName = '-' + branchName
+        }
+        prefix += `-${positions.join(',')}-${multipliers[positions.length - 1]}${branchName}`
+    }
+    // remove the first hyphen
+    prefix = prefix.slice(1)
+    return prefix + parentChainName
 }
 
 // return array of atoms from start to finish atom
@@ -212,63 +222,69 @@ function getChain(start, finish) {
     return result
 }
 
-function nameBranch(from, start) {
+let multipliers = ['', 'di', 'tri', 'tetra', 'penta', 'hexa', 'hepta', 'octa', 'nona', 'deca']
+
+function nameBranch(from, start, terminalAtomsAmong) {
     if (start.bonds.length == 1) {
         return names[0] + 'yl'
     }
-    let terminalAtoms = []
     let molecule = from.molecule
-    for (let i = 0; i < molecule.terminalAtoms.length; i++) {
-        if (from.distanceFrom(molecule.terminalAtoms[i]) > start.distance(molecule.terminalAtoms[i])) {
-            terminalAtoms.push(molecule.terminalAtoms[i])
+    let terminalAtoms = []
+    if (!terminalAtomsAmong) {
+        terminalAtomsAmong = molecule.terminalAtoms
+    }
+    for (let i = 0; i < terminalAtomsAmong.length; i++) {
+        if (from.distanceFrom(terminalAtomsAmong[i]) > start.distanceFrom(terminalAtomsAmong[i])) {
+            terminalAtoms.push(terminalAtomsAmong[i])
         }
     }
-    let farthestTerminalAtom = terminalAtoms[0]
-    let farthestDistance = start.distanceFrom(farthestTerminalAtom)
-    for (let i = 1; i < terminalAtoms.length; i++) {
-        let distance = start.distanceFrom(terminalAtoms[i])
-        if (farthestDistance < distance) {
-            farthestTerminalAtom = terminalAtoms[i]
-            farthestDistance = distance
-        }
-    }
-    let [secondary, tertiary, iso] = [false, false, false]
-    let atomInBranchMainChain = start
-    // keep adding atom to the chain from start to farthestTerminalAtom
-    for (let distanceNeeded = farthestDistance - 1; distanceNeeded > 0; distanceNeeded--) {
-        // if selected candidate (new atom in chain) has branches, record branch position and number of branches
-        if (atomInBranchMainChain.bonds.length > 2) {
-            if (atomInBranchMainChain.bonds.length == 3) {
-                secondary = true
-                continue
-            }
-            if (atomInBranchMainChain.bonds.length == 4) {
-                tertiary = true
+    if (start.bonds.length == 2) {
+        let farthestTerminalAtom = terminalAtoms[0]
+        let farthestDistance = start.distanceFrom(farthestTerminalAtom)
+        for (let i = 1; i < terminalAtoms.length; i++) {
+            let distance = start.distanceFrom(terminalAtoms[i])
+            if (farthestDistance < distance) {
+                farthestTerminalAtom = terminalAtoms[i]
+                farthestDistance = distance
             }
         }
-        // the next atom in the chain will be bonded to the last added atom
-        let candidates = atomInBranchMainChain[0].bonds
-        // the next atom will be one closer than the last added atom
-        // so distanceNeeded is decreasing by one
-
-        for (let j = 0; j < candidates.length; j++) {
-            if (candidates[j].distanceFrom(farthestTerminalAtom) == distanceNeeded) {
-                console.log('jound')
-                atomInBranchMainChain = candidates[j]
-                continue
+        let chain = getChain(start, farthestTerminalAtom)
+        // the subbranches of this branch
+        let branches = {}   // of the format {methyl: [2, 6], ethyl: [3] ...} {subbranchname: position}
+        let branchNames = []
+        // fillup branches map
+        for (let i = 1; i < chain.length - 1; i++) {
+            if (chain[i].bonds.length > 2) {
+                for (let j = 0; j < chain[i].bonds.length; j++) {
+                    if (chain[i].bonds[j] != chain[i - 1] && chain[i].bonds[j] != chain[i + 1]) {
+                        let subBranchName = nameBranch(chain[i], chain[i].bonds[j], terminalAtoms)
+                        branchNames.push(subBranchName)
+                        if (!branches[subBranchName]) {
+                            branches[subBranchName] = [i + 1]
+                        } else {
+                            branches[subBranchName].append(i + 1)
+                        }
+                    }
+                }
             }
         }
+        if (branchNames.length == 0) {
+            return names[farthestDistance] + 'yl'
+        }
+        branchNames.sort()
+        let prefix = ''
+        for (let branchName of branchNames) {
+            let positions = branches[branchName]
+            if ('0123456789'.includes(branchName[0])) {
+                branchName = '-' + branchName
+            }
+            prefix += `-${positions.join(',')}-${multipliers[positions.length - 1]}${branchName}`
+        }
+        // remove the first hyphen
+        prefix = prefix.slice(1)
+        return prefix + names[farthestDistance] + 'yl'
+    } else {
+        return 'notprimarybranch'
     }
-    // check if iso; atomInBranchMainChain is now second last atoms (distance = 1)
-    if (atomInBranchMainChain.bonds == 3 && !secondary && !tertiary) {
-        iso = true
-        return 'iso' + names[farthestDistance] + 'yl'
-    }
-    if (tertiary) {
-        return 'tert-' + names[farthestDistance] + 'yl'
-    }
-    if (secondary) {
-        return 'sec-' + names[farthestDistance] + 'yl'
-    }
-    return names[farthestDistance] + 'yl'
+    
 }
