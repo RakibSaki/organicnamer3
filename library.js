@@ -98,68 +98,92 @@ class Molecule {
                 if (i !== j) {
                     let distance = terminalAtoms[i].distanceFrom(terminalAtoms[j])
                     if (distance > longestChains[0].length) {
-                        longestChains = [
-                            {
-                                length: distance,
-                                between: [terminalAtoms[i], terminalAtoms[j]]
-                            }
-                        ]
+                        longestChains = [{ length: distance, between: [terminalAtoms[i], terminalAtoms[j]] }]
                         continue
                     }
                     if (distance == longestChains[0].length) {
-                        longestChains.push(
-                            {
-                                length: distance,
-                                between: [terminalAtoms[i], terminalAtoms[j]]
-                            })
+                        longestChains.push({ length: distance, between: [terminalAtoms[i], terminalAtoms[j]] })
                     }
                 }
             }
         }
-        // record properties of chains
-        for (let i = 0; i < longestChains.length; i++) {
-            let chain = getChain(longestChains[i].between[0], longestChains[i].between[1])
-            // position of branches, starting from 2 (terminal atom is 1)
-            longestChains[i].branchesAt = []
-            longestChains[i].branches = 0
-            // record branch positions and numbers of branches
-            for (let j = 0; j < chain.length; j++) {
-                if (chain[j].bonds.length > 2) {
-                    longestChains[i].branchesAt.push(j + 1)
-                    longestChains[i].branches += chain[j].bonds.length - 2
-                }
-            }
-            longestChains[i].chain = chain
-            longestChains[i].closestBranchAt = longestChains[i].branchesAt[0]
-        }
-        console.log(longestChains[0].closestBranchAt)
-        let chainsToSelectIndex = [0]
-        // find chain with most branches
-        for (let i = 1; i < longestChains.length; i++) {
-            // if found a chain with more branches, select that instead
-            if (longestChains[i].branches > longestChains[chainsToSelectIndex[0]].branches) {
-                chainsToSelectIndex = [i]
-                continue
-            }
-            // if found another chain with same number of branches, add that to selection
-            if (longestChains[i].branches == longestChains[chainsToSelectIndex[0]].branches) {
-                chainsToSelectIndex.push(i)
-            }
-        }
-        // if one chain exclusively has most branches, return that chain
-        if (chainsToSelectIndex.length == 1) {
-            return longestChains[chainsToSelectIndex[0]]
-        }
-        // else select chain with branches starting closest to a terminal atom
-        for (let i = 1; i < chainsToSelectIndex.length; i++) {
-            let chainToCheckAgainst = longestChains[chainsToSelectIndex[0]]
-            let chainToCheck = longestChains[chainsToSelectIndex[i]]
-            if (chainToCheck.closestBranchAt < chainToCheckAgainst.closestBranchAt) {
-                chainsToSelectIndex[0] = i
-            }
-        }
-        return longestChains[chainsToSelectIndex[0]]
+        return selectChain(longestChains)
     }
+}
+
+// return chain with most branches, chain starting branches first, chain starting alphabetically first branch first
+// chains here are objects with properties lenght and between
+function selectChain(longestChains) {// record properties of chains
+    for (let i = 0; i < longestChains.length; i++) {
+        let chain = getChain(longestChains[i].between[0], longestChains[i].between[1])
+        // position of branches, starting from 2 (terminal atom is 1)
+        longestChains[i].branchesAt = []
+        longestChains[i].branches = 0
+        // record branch positions and numbers of branches
+        for (let j = 0; j < chain.length; j++) {
+            if (chain[j].bonds.length > 2) {
+                longestChains[i].branchesAt.push(j + 1)
+                longestChains[i].branches += chain[j].bonds.length - 2
+            }
+        }
+        longestChains[i].chain = chain
+        longestChains[i].closestBranchAt = longestChains[i].branchesAt[0]
+    }
+    let longestChains2 = [longestChains[0]]
+    // find chains with most branches
+    for (let i = 1; i < longestChains.length; i++) {
+        // if found a chain with more branches, select that instead
+        if (longestChains[i].branches > longestChains2[0].branches) {
+            longestChains2 = [longestChains[i]]
+            continue
+        }
+        // if found another chain with same number of branches, add that to selection
+        if (longestChains[i].branches == longestChains2[0].branches) {
+            longestChains2.push(longestChains[i])
+        }
+    }
+    // if one chain exclusively has most branches, return that chain
+    if (longestChains2.length == 1) {
+        return longestChains2[0]
+    }
+    let longestChains3 = [longestChains2[0]]
+    // else select chain with branches starting closest to a terminal atom
+    for (let i = 1; i < longestChains2.length; i++) {
+        if (longestChains2[i].closestBranchAt < longestChains3[0].closestBranchAt) {
+            longestChains3 = [longestChains2[i]]
+            continue
+        }
+        if (longestChains2[i] == longestChains3[0].closestBranchAt) {
+            longestChains3.push(longestChains2[i])
+        }
+    }
+    if (longestChains3.length == 1) {
+        return longestChains3[0]
+    }
+    // select chain where first branch is alphabetically first
+    let finalSelection = longestChains3[0]
+    let selectedRootName = rootNameOfFirstBranch(longestChains3.chain)
+    for (let i = 1; i < longestChains3.length; i++) {
+        let rootName = lowestRootNameOfFirstBranches(longestChains3[i].chain, longestChains3[i].closestBranchAt - 1)
+        if (rootName < selectedRootName) {
+            finalSelection = longestChains3[i]
+            selectedRootName = rootName
+        }
+    }
+    return finalSelection
+}
+
+function lowestRootNameOfFirstBranches(chain, firstBranchesAt) {
+    let lowestRootName = 'zzzzzzzzzz'
+    for (let i = 0; i < chain[firstBranchesAt].bonds.length; i++) {
+        if (chain[firstBranchesAt].bonds[i] !== chain[i - 1] && chain[firstBranchesAt].bonds[i] !== chain[i + 1]) {
+            let rootName = nameBranch(chain[firstBranchesAt], chain[firstBranchesAt].bonds[i], rootOnly = true)
+            if (rootName < lowestRootName) {
+                lowestRootName = rootName
+            }
+        }
+    }
+    return lowestRootName
 }
 
 let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 'dec']
@@ -224,7 +248,7 @@ function nameBranches(chain, terminalAtomsAmong, avoidAtom) {
     return prefix
 }
 
-function nameBranch(from, start, terminalAtomsAmong) {
+function nameBranch(from, start, terminalAtomsAmong, rootOnly) {
     if (start.bonds.length == 1) {
         return names[0] + 'yl'
     }
@@ -248,6 +272,9 @@ function nameBranch(from, start, terminalAtomsAmong) {
                 farthestDistance = distance
             }
         }
+        if (rootOnly) {
+            return names[farthestDistance] + 'yl'
+        }
         let chain = getChain(start, farthestTerminalAtom)
         return nameBranches(chain, terminalAtoms) + names[farthestDistance] + 'yl'
     } else {
@@ -270,6 +297,7 @@ function nameBranch(from, start, terminalAtomsAmong) {
             }
         }
         let longestChains2 = [longestChains[0]]
+        // select chains starting closest to 'start' atoms
         for (let i = 1; i < longestChains.length; i++) {
             if (longestChains[i].startAt < longestChains2[0].startAt) {
                 longestChains2 = [longestChains[i]]
@@ -278,9 +306,17 @@ function nameBranch(from, start, terminalAtomsAmong) {
                 longestChains2.push(longestChains[i])
             }
         }
-        longestChains2[0].chain = getChain(longestChains2[0].between[0], longestChains2[0].between[1])
-        return nameBranches(longestChains2[0].chain, terminalAtoms, from) + names[longestChains2[0].length] + '-' + (longestChains2[0].startAt + 1).toString() + '-yl'
-        return 'notprimarybranch'
+        if (rootOnly) {
+            return names[longestChains2[0].length] + 'yl'
+        }
+        for (let i = 0; i < longestChains2.length; i++) {
+            longestChains2[i].chain = getChain(longestChains2[i].between[0], longestChains2[i].between[1])
+            for (let j = 1; j < longestChains2[i].chain.length; j ++) {
+
+            }
+        }
+        finalSelection = selectChain(longestChains2)
+        return nameBranches(finalSelection.chain, terminalAtoms, from) + names[finalSelection.length] + '-' + (finalSelection.startAt + 1).toString() + '-yl'
     }
 
 }
