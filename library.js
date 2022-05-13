@@ -186,7 +186,13 @@ function lowestRootNameOfFirstBranches(chain, firstBranchesAt) {
     return lowestRootName
 }
 
-let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 'dec']
+// upto 50
+let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 'dec',
+'undec', 'dodec', 'tridec', 'tetradec', 'pentadec', 'hexadec', 'heptadec', 'octadec', 'nonadec', 'icos',
+'henicos', 'docos', 'tricos', 'tetracos', 'pentacos', 'hexacos', 'heptacos', 'ocatcos', 'nonacos', 'triacont', 
+'hentriacont', 'dotriacont', 'tritriacont', 'tetratriacont', 'pentatriacont', 'hexatriacont', 'heptatriacont', 'ocattriacont', 'nonatriacont', 'tetracont',
+'hentetracont', 'dotetracont', 'tritetracont', 'tetratetracont', 'pentatetracont', 'hexatetracont', 'heptatetracont', 'ocattetracont', 'nonatetracont', 'pentacont'
+]
 
 function nameParentChain(parentChain) {
     let parentChainName = names[parentChain.chain.length - 1] + 'ane'
@@ -209,7 +215,11 @@ function getChain(start, finish) {
     return result
 }
 
-let multipliers = ['', 'di', 'tri', 'tetra', 'penta', 'hexa', 'hepta', 'octa', 'nona', 'deca']
+let multipliers = names.map(e => e + 'a')
+multipliers[0] = ''
+multipliers[1] = 'di'
+multipliers[2] = 'tri'
+multipliers[3] = 'tetra'
 
 function nameBranches(chain, terminalAtomsAmong, avoidAtom) {
     let branches = {}   // of the format {methyl: [2, 6], ethyl: [3] ...} {subbranchname: position}
@@ -244,7 +254,6 @@ function nameBranches(chain, terminalAtomsAmong, avoidAtom) {
     }
     // remove the first hyphen
     prefix = prefix.slice(1)
-    console.log(prefix)
     return prefix
 }
 

@@ -4,9 +4,7 @@ let selected
 let mouseOnAtom = false
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('loaded')
     document.body.addEventListener('click', event => {
-        console.log('click')
         if (!mouseOnAtom) {
             let newAtom = new Atom(event.clientX, event.clientY, selected)
             mouseOnAtom = true
@@ -24,6 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (selected) {
                     selected.element.classList.remove('selected-atom')
+                }
+                if (newAtom.bonds.length == 4) {
+                    return
                 }
                 selected = newAtom
                 selected.element.classList.add('selected-atom')
