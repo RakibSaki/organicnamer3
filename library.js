@@ -116,7 +116,7 @@ class Molecule {
                 }
             }
         }
-        // if several longest chains, just choosing the first longest chain for now
+        // record properties of chains
         for (let i = 0; i < longestChains.length; i++) {
             let chain = getChain(longestChains[i].between[0], longestChains[i].between[1])
             // position of branches, starting from 2 (terminal atom is 1)
@@ -131,10 +131,6 @@ class Molecule {
             }
             longestChains[i].chain = chain
             longestChains[i].closestBranchAt = longestChains[i].branchesAt[0]
-            let closestFromOtherEnd = 2 + longestChains[i].length  - longestChains[i].branchesAt[longestChains[i].branchesAt.length - 1]
-            if (closestFromOtherEnd < longestChains[i].closestBranchAt) {
-                longestChains[i].closestBranchAt = closestFromOtherEnd
-            }
         }
         console.log(longestChains[0].closestBranchAt)
         let chainsToSelectIndex = [0]
@@ -170,40 +166,7 @@ let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 
 
 function nameParentChain(parentChain) {
     let parentChainName = names[parentChain.chain.length - 1] + 'ane'
-    let chain = parentChain.chain
-    let branches = {}
-    let branchNames = []
-    for (let i = 1; i < chain.length - 1; i++) {
-        if (chain[i].bonds.length > 2) {
-            for (let j = 0; j < chain[i].bonds.length; j++) {
-                if (chain[i].bonds[j] != chain[i - 1] && chain[i].bonds[j] != chain[i + 1]) {
-                    let subBranchName = nameBranch(chain[i], chain[i].bonds[j])
-                    if (!branchNames.includes(subBranchName)) {
-                        branchNames.push(subBranchName)
-                    }
-                    if (!branches[subBranchName]) {
-                        branches[subBranchName] = [i + 1]
-                    } else {
-                        branches[subBranchName].push(i + 1)
-                    }
-                }
-            }
-        }
-    }
-    if (branchNames.length == 0) {
-        return parentChainName
-    }
-    branchNames.sort()
-    let prefix = ''
-    for (let branchName of branchNames) {
-        let positions = branches[branchName]
-        if ('0123456789'.includes(branchName[0])) {
-            branchName = '-' + branchName
-        }
-        prefix += `-${positions.join(',')}-${multipliers[positions.length - 1]}${branchName}`
-    }
-    // remove the first hyphen
-    prefix = prefix.slice(1)
+    let prefix = nameBranches(parentChain.chain)
     return prefix + parentChainName
 }
 
@@ -223,6 +186,43 @@ function getChain(start, finish) {
 }
 
 let multipliers = ['', 'di', 'tri', 'tetra', 'penta', 'hexa', 'hepta', 'octa', 'nona', 'deca']
+
+function nameBranches(chain, terminalAtomsAmong) {
+    let branches = {}   // of the format {methyl: [2, 6], ethyl: [3] ...} {subbranchname: position}
+    let branchNames = []
+    // fillup branches map
+    for (let i = 1; i < chain.length - 1; i++) {
+        if (chain[i].bonds.length > 2) {
+            for (let j = 0; j < chain[i].bonds.length; j++) {
+                if (chain[i].bonds[j] != chain[i - 1] && chain[i].bonds[j] != chain[i + 1]) {
+                    let subBranchName = nameBranch(chain[i], chain[i].bonds[j], terminalAtomsAmong)
+                    if (!branches[subBranchName]) {
+                        branches[subBranchName] = [i + 1]
+                        branchNames.push(subBranchName)
+                    } else {
+                        branches[subBranchName].push(i + 1)
+                    }
+                }
+            }
+        }
+    }
+    if (branchNames.length == 0) {
+        return ''
+    }
+    branchNames.sort()
+    let prefix = ''
+    for (let branchName of branchNames) {
+        let positions = branches[branchName]
+        if ('0123456789'.includes(branchName[0])) {
+            branchName = '-' + branchName
+        }
+        prefix += `-${positions.join(',')}-${multipliers[positions.length - 1]}${branchName}`
+    }
+    // remove the first hyphen
+    prefix = prefix.slice(1)
+    console.log(prefix)
+    return prefix
+}
 
 function nameBranch(from, start, terminalAtomsAmong) {
     if (start.bonds.length == 1) {
@@ -249,42 +249,14 @@ function nameBranch(from, start, terminalAtomsAmong) {
             }
         }
         let chain = getChain(start, farthestTerminalAtom)
-        // the subbranches of this branch
-        let branches = {}   // of the format {methyl: [2, 6], ethyl: [3] ...} {subbranchname: position}
-        let branchNames = []
-        // fillup branches map
-        for (let i = 1; i < chain.length - 1; i++) {
-            if (chain[i].bonds.length > 2) {
-                for (let j = 0; j < chain[i].bonds.length; j++) {
-                    if (chain[i].bonds[j] != chain[i - 1] && chain[i].bonds[j] != chain[i + 1]) {
-                        let subBranchName = nameBranch(chain[i], chain[i].bonds[j], terminalAtoms)
-                        branchNames.push(subBranchName)
-                        if (!branches[subBranchName]) {
-                            branches[subBranchName] = [i + 1]
-                        } else {
-                            branches[subBranchName].append(i + 1)
-                        }
-                    }
-                }
-            }
-        }
-        if (branchNames.length == 0) {
-            return names[farthestDistance] + 'yl'
-        }
-        branchNames.sort()
-        let prefix = ''
-        for (let branchName of branchNames) {
-            let positions = branches[branchName]
-            if ('0123456789'.includes(branchName[0])) {
-                branchName = '-' + branchName
-            }
-            prefix += `-${positions.join(',')}-${multipliers[positions.length - 1]}${branchName}`
-        }
-        // remove the first hyphen
-        prefix = prefix.slice(1)
-        return prefix + names[farthestDistance] + 'yl'
+        return nameBranches(chain, terminalAtoms) + names[farthestDistance] + 'yl'
     } else {
+        for (let i = 0; i < terminalAtoms.length; i++) {
+            for (let j = 0; j < terminalAtoms.length; j++) {
+
+            }
+        }
         return 'notprimarybranch'
     }
-    
+
 }
