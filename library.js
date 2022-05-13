@@ -118,32 +118,35 @@ class Molecule {
         }
         // if several longest chains, just choosing the first longest chain for now
         for (let i = 0; i < longestChains.length; i++) {
-            let chain = [longestChains[i].between[0]]
+            let chain = getChain(longestChains[i].between[0], longestChains[i].between[1])
             // position of branches, starting from 2 (terminal atom is 1)
             longestChains[i].branchesAt = []
-            longestChains.branches = 0
+            longestChains[i].branches = 0
             // keep adding atom to the chain from between[0] to between[1]
-            for (let distanceNeeded = longestChains[i].length - 1; distanceNeeded >= 0; distanceNeeded--) {
-                // the next atom in the chain will be bonded to the last added atom
-                let candidates = chain[0].bonds
-                // the next atom will be one closer than the last added atom
-                // so distanceNeeded is decreasing by one
+            // for (let distanceNeeded = longestChains[i].length - 1; distanceNeeded >= 0; distanceNeeded--) {
+            //     // the next atom in the chain will be bonded to the last added atom
+            //     let candidates = chain[0].bonds
+            //     // the next atom will be one closer than the last added atom
+            //     // so distanceNeeded is decreasing by one
 
-                // the atom with 0 distance from between[1] is between[1] itself, and the chain is complete
-                if (distanceNeeded == 0) {
-                    chain.unshift(longestChains[i].between[1])
-                    continue
-                }
-                for (let j = 0; j < candidates.length; j++) {
-                    if (candidates[j].distanceFrom(longestChains[i].between[1]) == distanceNeeded) {
-                        chain.unshift(candidates[j])
-                        continue
-                    }
-                }
-                // if selected candidate (new atom in chain) has branches, record branch position and number of branches
-                if (chain[0].bonds.length > 2) {
-                    longestChains[i].branchesAt.push(1 + longestChains[i].length - distanceNeeded)
-                    longestChains[i].branches += chain[0].bonds.length - 2
+            //     // the atom with 0 distance from between[1] is between[1] itself, and the chain is complete
+            //     if (distanceNeeded == 0) {
+            //         chain.unshift(longestChains[i].between[1])
+            //         continue
+            //     }
+            //     for (let j = 0; j < candidates.length; j++) {
+            //         if (candidates[j].distanceFrom(longestChains[i].between[1]) == distanceNeeded) {
+            //             chain.unshift(candidates[j])
+            //             continue
+            //         }
+            //     }
+            //     
+            // }
+            // record branch positions and numbers of branches
+            for (let j = 0; j < chain.length; j++) {
+                if (chain[j].bonds.length > 2) {
+                    longestChains[i].branchesAt.push(j + 1)
+                    longestChains[i].branches += chain[j].bonds.length - 2
                 }
             }
             longestChains[i].chain = chain
@@ -153,6 +156,7 @@ class Molecule {
                 longestChains[i].closestBranchAt = closestFromOtherEnd
             }
         }
+        console.log(longestChains[0].closestBranchAt)
         let chainsToSelectIndex = [0]
         // find chain with most branches
         for (let i = 1; i < longestChains.length; i++) {
@@ -186,9 +190,26 @@ let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 
 
 function nameParentChain(parentChain) {
     let parentChainName = names[parentChain.chain.length - 1] + 'ane'
+    return parentChainName
+    let branches = {}
     for (let i = 0; i < parentChain.chain.length; i++) {
         
     }
+}
+
+// return array of atoms from start to finish atom
+function getChain(start, finish) {
+    let result = []
+    result.unshift(finish)
+    for (let distanceNeeded = start.distanceFrom(finish) - 1; distanceNeeded > 0; distanceNeeded--) {
+        for (let i = 0; i < result[0].bonds.length; i++) {
+            if (start.distanceFrom(result[0].bonds[i]) == distanceNeeded) {
+                result.unshift(result[0].bonds[i])
+            }
+        }
+    }
+    result.unshift(start)
+    return result
 }
 
 function nameBranch(from, start) {
@@ -244,10 +265,10 @@ function nameBranch(from, start) {
         return 'iso' + names[farthestDistance] + 'yl'
     }
     if (tertiary) {
-        return 'tert' + names[farthestDistance] + 'yl'
+        return 'tert-' + names[farthestDistance] + 'yl'
     }
     if (secondary) {
-        return 'sec' + names[farthestDistance] + 'yl'
+        return 'sec-' + names[farthestDistance] + 'yl'
     }
     return names[farthestDistance] + 'yl'
 }
