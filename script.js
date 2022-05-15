@@ -70,5 +70,5 @@ function showName(molecule) {
     for (let i = 0; i < molecule.atoms.length; i++) {
         molecule.atoms[i].element.innerHTML = ''
     }
-    molecule.atoms[0].element.innerHTML = '\n' + nameParentChain(molecule.parentChain())
+    molecule.atoms[0].element.innerHTML = molecule.name()
 }

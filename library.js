@@ -9,8 +9,6 @@ class Atom {
     constructor(x, y, bondWith) {
         [this.x, this.y] = [x, y]
         this.bondWith = bondWith
-        // keep drawing stuff in script.js
-        // this.draw()
         this.bonds = []
         this.distances = []
         if (!bondWith) {
@@ -27,7 +25,7 @@ class Atom {
                 new Distance(this, 1 + distance.distance))
         }
         // record distance with bonded atom
-        this.distances.unshift(new Distance(bondWith, 1))   // unshifting instead of pushing here ensures the distances list is sorted in ascending distance
+        this.distances.unshift(new Distance(bondWith, 1))   // no it does'nt // unshifting instead of pushing here ensures the distances list is sorted in ascending distance
         bondWith.distances.unshift(new Distance(this, 1))
         // record molecule
         bondWith.molecule.add(this)
@@ -43,26 +41,28 @@ class Atom {
     }
 }
 
+class Chain {
+    constructor(length, between) {
+        this.length = length | 0
+        this.between = between
+    }
+}
+
 class Molecule {
     constructor(atom) {
         this.atoms = []
         if (atom) this.atoms.push(atom)
     }
-    showName() {
-        for (let i = 0; i < this.atoms.length; i++) {
-            this.atoms[i].element.innerHTML = ''
-        }
-        this.atoms[0].element.innerHTML = '\n' + nameParentChain(this.parentChain())
-    }
     add(atom) {
         atom.molecule = this
         this.atoms.unshift(atom)
+        this.determineParentChain()
     }
-    parentChain() {
+    // should be called everytime the molecule structure changes
+    determineParentChain() {
         if (this.atoms.length == 1) {
-            return {
-                chain: [this.atoms[0]]
-            }
+            this.parentChain = [this.atoms[0]]
+            return
         }
         let terminalAtoms = []
         // find terminal atoms
@@ -72,80 +72,76 @@ class Molecule {
             }
         }
         this.terminalAtoms = terminalAtoms
-        let longestChains = [{ length: 0, between: [null, null] }]
+        let longestChains = [new Chain()]
         // record longest chain(s)
         for (let i = 0; i < terminalAtoms.length; i++) {
             for (let j = 0; j < terminalAtoms.length; j++) {
                 if (i !== j) {
                     let distance = terminalAtoms[i].distanceFrom(terminalAtoms[j])
-                    if (distance > longestChains[0].length) {
-                        longestChains = [{ length: distance, between: [terminalAtoms[i], terminalAtoms[j]] }]
-                        continue
-                    }
-                    if (distance == longestChains[0].length) {
-                        longestChains.push({ length: distance, between: [terminalAtoms[i], terminalAtoms[j]] })
-                    }
+                    let chain = new Chain(distance, [terminalAtoms[i], terminalAtoms[j]])
+                    updateBestList(longestChains, chain, chain => chain.length)
                 }
             }
         }
-        return selectChain(longestChains)
+        this.parentChain = selectChain(longestChains).chain
+    }
+    name() {
+        let parentChainName = names[this.parentChain.length - 1] + 'ane'
+        let prefix = nameBranches(this.parentChain)
+        return prefix + parentChainName
+    }
+}
+
+// list should have elements with highest property only
+function updateBestList(list, element, property) {
+    if (property(element) > property(list[0])) {
+        list[0] = element
+        // remove everything else
+        while (list.length > 1) {
+            list.pop()
+        }
+        return
+    }
+    if (property(element) == property(list[0])) {
+        list.push(element)
     }
 }
 
 // return chain with most branches, chain starting branches first, chain starting alphabetically first branch first
-// chains here are objects with properties lenght and between
-function selectChain(longestChains) {// record properties of chains
+function selectChain(longestChains) {
+    // record properties of chains
+    // chain of atoms, total number of branches, position of branches, position of first branch
     for (let i = 0; i < longestChains.length; i++) {
         let chain = getChain(longestChains[i].between[0], longestChains[i].between[1])
-        // position of branches, starting from 2 (terminal atom is 1)
         longestChains[i].branchesAt = []
         longestChains[i].branches = 0
-        // record branch positions and numbers of branches
-        for (let j = 0; j < chain.length; j++) {
+        for (let j = 1; j < chain.length - 1; j++) {
             if (chain[j].bonds.length > 2) {
                 longestChains[i].branchesAt.push(j + 1)
                 longestChains[i].branches += chain[j].bonds.length - 2
             }
         }
         longestChains[i].chain = chain
-        longestChains[i].closestBranchAt = longestChains[i].branchesAt[0]
+        longestChains[i].firstBranchAt = longestChains[i].branchesAt[0]
     }
     let longestChains2 = [longestChains[0]]
     // find chains with most branches
     for (let i = 1; i < longestChains.length; i++) {
-        // if found a chain with more branches, select that instead
-        if (longestChains[i].branches > longestChains2[0].branches) {
-            longestChains2 = [longestChains[i]]
-            continue
-        }
-        // if found another chain with same number of branches, add that to selection
-        if (longestChains[i].branches == longestChains2[0].branches) {
-            longestChains2.push(longestChains[i])
-        }
-    }
-    // if one chain exclusively has most branches, return that chain
-    if (longestChains2.length == 1) {
-        return longestChains2[0]
+        updateBestList(longestChains2, longestChains[i], chain => chain.branches)
     }
     let longestChains3 = [longestChains2[0]]
-    // else select chain with branches starting closest to a terminal atom
+    // find chains with branches starting closest to a terminal atom
     for (let i = 1; i < longestChains2.length; i++) {
-        if (longestChains2[i].closestBranchAt < longestChains3[0].closestBranchAt) {
-            longestChains3 = [longestChains2[i]]
-            continue
-        }
-        if (longestChains2[i] == longestChains3[0].closestBranchAt) {
-            longestChains3.push(longestChains2[i])
-        }
+        updateBestList(longestChains3, longestChains2[i], chain => -chain.firstBranchAt)
     }
     if (longestChains3.length == 1) {
         return longestChains3[0]
     }
     // select chain where first branch is alphabetically first
     let finalSelection = longestChains3[0]
-    let selectedRootName = rootNameOfFirstBranch(longestChains3.chain)
+    let selectedRootName = lowestRootNameOfFirstBranches(finalSelection)
     for (let i = 1; i < longestChains3.length; i++) {
-        let rootName = lowestRootNameOfFirstBranches(longestChains3[i].chain, longestChains3[i].closestBranchAt - 1)
+        let rootName = lowestRootNameOfFirstBranches(longestChains3[i])
         if (rootName < selectedRootName) {
             finalSelection = longestChains3[i]
             selectedRootName = rootName
@@ -154,7 +150,9 @@ function selectChain(longestChains) {// record properties of chains
     return finalSelection
 }
 
-function lowestRootNameOfFirstBranches(chain, firstBranchesAt) {
+function lowestRootNameOfFirstBranches(chain) {
+    let firstBranchesAt = chain.firstBranchAt - 1
+    chain = chain.chain // :DDDDDDDDDDDDDDD
     let lowestRootName = 'zzzzzzzzzz'
     for (let i = 0; i < chain[firstBranchesAt].bonds.length; i++) {
         if (chain[firstBranchesAt].bonds[i] !== chain[i - 1] && chain[firstBranchesAt].bonds[i] !== chain[i + 1]) {
@@ -175,17 +173,12 @@ let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 
     'hentetracont', 'dotetracont', 'tritetracont', 'tetratetracont', 'pentatetracont', 'hexatetracont', 'heptatetracont', 'ocattetracont', 'nonatetracont', 'pentacont'
 ]
 
-function nameParentChain(parentChain) {
-    let parentChainName = names[parentChain.chain.length - 1] + 'ane'
-    let prefix = nameBranches(parentChain.chain)
-    return prefix + parentChainName
-}
-
 // return array of atoms from start to finish atom
 function getChain(start, finish) {
     let result = []
     result.unshift(finish)
     for (let distanceNeeded = start.distanceFrom(finish) - 1; distanceNeeded > 0; distanceNeeded--) {
+        // the next atom to add is bonded to the last added atom
         for (let i = 0; i < result[0].bonds.length; i++) {
             if (start.distanceFrom(result[0].bonds[i]) == distanceNeeded) {
                 result.unshift(result[0].bonds[i])
@@ -197,7 +190,7 @@ function getChain(start, finish) {
 }
 
 let multipliers = names.map(e => e + 'a')
-multipliers[0] = ''
+multipliers[0] = '' // we don't care about 'mono'
 multipliers[1] = 'di'
 multipliers[2] = 'tri'
 multipliers[3] = 'tetra'
