@@ -7,65 +7,46 @@ class Distance {
 
 class Atom {
     constructor(x, y, bondWith) {
-        this.x = x
-        this.y = y
-        this.draw()
+        [this.x, this.y] = [x, y]
+        this.bondWith = bondWith
+        // keep drawing stuff in script.js
+        // this.draw()
         this.bonds = []
         this.distances = []
         if (!bondWith) {
             return
         }
-        let bondLine = document.createElement('div')
-        bondLine.classList.add('bond')
-        bondLine.style.left = `${(this.x + bondWith.x) / 2}px`
-        bondLine.style.top = `${(this.y + bondWith.y) / 2}px`
-        let width = Math.sqrt(((this.x - bondWith.x) * (this.x - bondWith.x)) + ((this.y - bondWith.y) * (this.y - bondWith.y)))
-        bondLine.style.width = `${width}px`
-        let rotate = Math.atan((bondWith.y - this.y) / (bondWith.x - this.x))
-        bondLine.style.transform = `translate(${width / -2}px, -1px) rotate(${rotate}rad)`
-        bondLine.style.zIndex = '-1'
-        document.body.appendChild(bondLine)
         // record bond
         this.bonds.push(bondWith)
         bondWith.bonds.push(this)
         // record distance with every other atom
         for (let distance of bondWith.distances) {
-            this.distances.push(new Distance(
-                distance.atom, 1 + distance.distance))
-            distance.atom.distances.push(new Distance(
-                this, 1 + distance.distance))
+            this.distances.push(
+                new Distance(distance.atom, 1 + distance.distance))
+            distance.atom.distances.push(
+                new Distance(this, 1 + distance.distance))
         }
         // record distance with bonded atom
-        this.distances.push(new Distance(bondWith, 1))
-        bondWith.distances.push(new Distance(this, 1))
+        this.distances.unshift(new Distance(bondWith, 1))   // unshifting instead of pushing here ensures the distances list is sorted in ascending distance
+        bondWith.distances.unshift(new Distance(this, 1))
         // record molecule
         bondWith.molecule.add(this)
-        this.molecule.showName()
     }
 
     distanceFrom(atom) {
-        for (let i = 0; i < this.distances.length; i++) {
-            if (atom == this.distances[i].atom) {
-                return this.distances[i].distance
+        for (let distance of this.distances) {
+            if (atom == distance.atom) {
+                return distance.distance
             }
         }
         return NaN
-    }
-
-    draw() {
-        this.element = document.createElement('div')
-        this.element.classList.add('atom')
-        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`
-        document.body.appendChild(this.element)
     }
 }
 
 class Molecule {
     constructor(atom) {
         this.atoms = []
-        if (atom) {
-            this.atoms.push(atom)
-        }
+        if (atom) this.atoms.push(atom)
     }
     showName() {
         for (let i = 0; i < this.atoms.length; i++) {
@@ -188,10 +169,10 @@ function lowestRootNameOfFirstBranches(chain, firstBranchesAt) {
 
 // upto 50
 let names = ['meth', 'eth', 'prop', 'but', 'pent', 'hex', 'hept', 'oct', 'non', 'dec',
-'undec', 'dodec', 'tridec', 'tetradec', 'pentadec', 'hexadec', 'heptadec', 'octadec', 'nonadec', 'icos',
-'henicos', 'docos', 'tricos', 'tetracos', 'pentacos', 'hexacos', 'heptacos', 'ocatcos', 'nonacos', 'triacont', 
-'hentriacont', 'dotriacont', 'tritriacont', 'tetratriacont', 'pentatriacont', 'hexatriacont', 'heptatriacont', 'ocattriacont', 'nonatriacont', 'tetracont',
-'hentetracont', 'dotetracont', 'tritetracont', 'tetratetracont', 'pentatetracont', 'hexatetracont', 'heptatetracont', 'ocattetracont', 'nonatetracont', 'pentacont'
+    'undec', 'dodec', 'tridec', 'tetradec', 'pentadec', 'hexadec', 'heptadec', 'octadec', 'nonadec', 'icos',
+    'henicos', 'docos', 'tricos', 'tetracos', 'pentacos', 'hexacos', 'heptacos', 'ocatcos', 'nonacos', 'triacont',
+    'hentriacont', 'dotriacont', 'tritriacont', 'tetratriacont', 'pentatriacont', 'hexatriacont', 'heptatriacont', 'ocattriacont', 'nonatriacont', 'tetracont',
+    'hentetracont', 'dotetracont', 'tritetracont', 'tetratetracont', 'pentatetracont', 'hexatetracont', 'heptatetracont', 'ocattetracont', 'nonatetracont', 'pentacont'
 ]
 
 function nameParentChain(parentChain) {
@@ -320,7 +301,7 @@ function nameBranch(from, start, terminalAtomsAmong, rootOnly) {
         }
         for (let i = 0; i < longestChains2.length; i++) {
             longestChains2[i].chain = getChain(longestChains2[i].between[0], longestChains2[i].between[1])
-            for (let j = 1; j < longestChains2[i].chain.length; j ++) {
+            for (let j = 1; j < longestChains2[i].chain.length; j++) {
 
             }
         }
